@@ -42,6 +42,11 @@ import java.util.Set;
  * <a href="http://en.wikipedia.org/wiki/Failover">Failover</a>
  *
  */
+
+/**
+ * failover：如果请求失败，会尝试该服务的其他实例。
+ * @param <T>
+ */
 public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(FailoverClusterInvoker.class);

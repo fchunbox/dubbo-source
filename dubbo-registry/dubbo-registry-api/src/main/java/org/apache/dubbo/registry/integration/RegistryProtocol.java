@@ -113,6 +113,7 @@ public class RegistryProtocol implements Protocol {
 
     public static RegistryProtocol getRegistryProtocol() {
         if (INSTANCE == null) {
+            // 加载RegistryProtocol
             ExtensionLoader.getExtensionLoader(Protocol.class).getExtension(REGISTRY_PROTOCOL); // load
         }
         return INSTANCE;
@@ -165,9 +166,16 @@ public class RegistryProtocol implements Protocol {
         registry.unregister(registeredProviderUrl);
     }
 
+    /**
+     * 作用： 在服务暴露之前，向服务注册中心注册服务。
+     * @param originInvoker
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
-        URL registryUrl = getRegistryUrl(originInvoker);
+        URL registryUrl = getRegistryUrl(originInvoker); // 获取注册中心地址
         // url to export locally
         URL providerUrl = getProviderUrl(originInvoker);
 
@@ -183,14 +191,14 @@ public class RegistryProtocol implements Protocol {
         //export invoker
         final ExporterChangeableWrapper<T> exporter = doLocalExport(originInvoker, providerUrl);
 
-        // url to registry
+        // url to registry 获取registry
         final Registry registry = getRegistry(originInvoker);
         final URL registeredProviderUrl = getRegisteredProviderUrl(providerUrl, registryUrl);
         ProviderInvokerWrapper<T> providerInvokerWrapper = ProviderConsumerRegTable.registerProvider(originInvoker,
                 registryUrl, registeredProviderUrl);
         //to judge if we need to delay publish
         boolean register = registeredProviderUrl.getParameter("register", true);
-        if (register) {
+        if (register) { // 向注册中心注册服务
             register(registryUrl, registeredProviderUrl);
             providerInvokerWrapper.setReg(true);
         }

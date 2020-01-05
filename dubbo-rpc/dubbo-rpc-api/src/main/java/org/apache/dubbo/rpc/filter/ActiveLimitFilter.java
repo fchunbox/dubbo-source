@@ -45,20 +45,25 @@ public class ActiveLimitFilter implements Filter {
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
         URL url = invoker.getUrl();
         String methodName = invocation.getMethodName();
+        // 获取激活的最大数量。
         int max = invoker.getUrl().getMethodParameter(methodName, Constants.ACTIVES_KEY, 0);
         RpcStatus count = RpcStatus.getStatus(invoker.getUrl(), invocation.getMethodName());
         if (!count.beginCount(url, methodName, max)) {
+            // 获取超时时间
             long timeout = invoker.getUrl().getMethodParameter(invocation.getMethodName(), Constants.TIMEOUT_KEY, 0);
             long start = System.currentTimeMillis();
             long remain = timeout;
             synchronized (count) {
+                // 自旋， 多次尝试激活当前调用方法，
                 while (!count.beginCount(url, methodName, max)) {
                     try {
-                        count.wait(remain);
+                        count.wait(remain); // 等待remain时间
                     } catch (InterruptedException e) {
                         // ignore
                     }
                     long elapsed = System.currentTimeMillis() - start;
+
+                    // 在指定的超时时间内，还没有完成方法的激活，那么直接就报错。
                     remain = timeout - elapsed;
                     if (remain <= 0) {
                         throw new RpcException("Waiting concurrent invoke timeout in client-side for service:  "
@@ -74,11 +79,12 @@ public class ActiveLimitFilter implements Filter {
         boolean isSuccess = true;
         long begin = System.currentTimeMillis();
         try {
-            return invoker.invoke(invocation);
+            return invoker.invoke(invocation); // 调用方法
         } catch (RuntimeException t) {
             isSuccess = false;
             throw t;
         } finally {
+            // 接口方法数减1
             count.endCount(url, methodName, System.currentTimeMillis() - begin, isSuccess);
             if (max > 0) {
                 synchronized (count) {

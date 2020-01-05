@@ -270,8 +270,11 @@ public class ExpiringMap<K, V> implements Map<K, V> {
         @Override
         public void run() {
             while (running) {
+
+                // 检测缓存是否过期
                 processExpires();
                 try {
+                    // sleep
                     Thread.sleep(expirationIntervalMillis);
                 } catch (InterruptedException e) {
                     running = false;

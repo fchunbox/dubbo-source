@@ -32,6 +32,7 @@ import org.apache.dubbo.rpc.RpcStatus;
  * continue the same behaviour un till it is <10.
  *
  */
+// 属于服务端线程池限流
 @Activate(group = Constants.PROVIDER, value = Constants.EXECUTES_KEY)
 public class ExecuteLimitFilter implements Filter {
 
@@ -39,8 +40,10 @@ public class ExecuteLimitFilter implements Filter {
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
         URL url = invoker.getUrl();
         String methodName = invocation.getMethodName();
+        // 获取服务指定方法，最大的执行请求数量
         int max = url.getMethodParameter(methodName, Constants.EXECUTES_KEY, 0);
         if (!RpcStatus.beginCount(url, methodName, max)) {
+            // 如果超过了最大值，直接失败。
             throw new RpcException("Failed to invoke method " + invocation.getMethodName() + " in provider " +
                     url + ", cause: The service using threads greater than <dubbo:service executes=\"" + max +
                     "\" /> limited.");
@@ -49,6 +52,7 @@ public class ExecuteLimitFilter implements Filter {
         long begin = System.currentTimeMillis();
         boolean isSuccess = true;
         try {
+            // 调用方法
             return invoker.invoke(invocation);
         } catch (Throwable t) {
             isSuccess = false;

@@ -287,7 +287,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     protected List<URL> loadRegistries(boolean provider) {
         // check && override if necessary
         List<URL> registryList = new ArrayList<URL>();
-        if (CollectionUtils.isNotEmpty(registries)) {
+        if (CollectionUtils.isNotEmpty(registries)) { // 判断
             for (RegistryConfig config : registries) {
                 String address = config.getAddress();
                 if (StringUtils.isEmpty(address)) {
@@ -309,6 +309,10 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                                 .addParameter(Constants.REGISTRY_KEY, url.getProtocol())
                                 .setProtocol(Constants.REGISTRY_PROTOCOL)
                                 .build();
+
+                        // 如果是provider端，仅订阅和仅注册的实现
+                        // 仅订阅： 不会注册服务
+                        // 仅注册： 不会订阅服务
                         if ((provider && url.getParameter(Constants.REGISTER_KEY, true))
                                 || (!provider && url.getParameter(Constants.SUBSCRIBE_KEY, true))) {
                             registryList.add(url);

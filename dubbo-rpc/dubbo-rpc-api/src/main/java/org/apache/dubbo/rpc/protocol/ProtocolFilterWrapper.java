@@ -44,13 +44,26 @@ public class ProtocolFilterWrapper implements Protocol {
         this.protocol = protocol;
     }
 
+    /**
+     * 构建InvokerChain 构建了Invoker Chain
+     * @param invoker
+     * @param key
+     * @param group
+     * @param <T>
+     * @return
+     */
     private static <T> Invoker<T> buildInvokerChain(final Invoker<T> invoker, String key, String group) {
         Invoker<T> last = invoker;
+
+        // 加载Filter， 包括限流、缓存、集群容错。
         List<Filter> filters = ExtensionLoader.getExtensionLoader(Filter.class).getActivateExtension(invoker.getUrl(), key, group);
         if (!filters.isEmpty()) {
             for (int i = filters.size() - 1; i >= 0; i--) {
+
                 final Filter filter = filters.get(i);
                 final Invoker<T> next = last;
+
+                // 这样形成了过滤器链
                 last = new Invoker<T>() {
 
                     @Override
@@ -92,7 +105,8 @@ public class ProtocolFilterWrapper implements Protocol {
                 };
             }
         }
-        return last;
+
+        return last; // 这里返回的last，其实是最先执行的invoker
     }
 
     @Override
@@ -105,6 +119,7 @@ public class ProtocolFilterWrapper implements Protocol {
         if (Constants.REGISTRY_PROTOCOL.equals(invoker.getUrl().getProtocol())) {
             return protocol.export(invoker);
         }
+        // 执行filter链
         return protocol.export(buildInvokerChain(invoker, Constants.SERVICE_FILTER_KEY, Constants.PROVIDER));
     }
 
@@ -113,6 +128,8 @@ public class ProtocolFilterWrapper implements Protocol {
         if (Constants.REGISTRY_PROTOCOL.equals(url.getProtocol())) {
             return protocol.refer(type, url);
         }
+
+        // 构建引用链
         return buildInvokerChain(protocol.refer(type, url), Constants.REFERENCE_FILTER_KEY, Constants.CONSUMER);
     }
 

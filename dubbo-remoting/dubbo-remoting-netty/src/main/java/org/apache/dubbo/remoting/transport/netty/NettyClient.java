@@ -65,9 +65,9 @@ public class NettyClient extends AbstractClient {
         bootstrap = new ClientBootstrap(channelFactory);
         // config
         // @see org.jboss.netty.channel.socket.SocketChannelConfig
-        bootstrap.setOption("keepAlive", true);
-        bootstrap.setOption("tcpNoDelay", true);
-        bootstrap.setOption("connectTimeoutMillis", getConnectTimeout());
+        bootstrap.setOption("keepAlive", true); // 设置长连接
+        bootstrap.setOption("tcpNoDelay", true); // 设置tcp无延迟
+        bootstrap.setOption("connectTimeoutMillis", getConnectTimeout()); // 设置连接超时时间
         final NettyHandler nettyHandler = new NettyHandler(getUrl(), this);
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
             @Override

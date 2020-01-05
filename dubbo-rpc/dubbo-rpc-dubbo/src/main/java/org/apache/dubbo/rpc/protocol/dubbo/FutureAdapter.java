@@ -32,15 +32,21 @@ import java.util.concurrent.TimeoutException;
 public class FutureAdapter<V> extends CompletableFuture<V> {
 
     private final ResponseFuture future;
+
+    // 最终委托给CompletableFuture
     private CompletableFuture<Result> resultFuture;
 
     public FutureAdapter(ResponseFuture future) {
         this.future = future;
         this.resultFuture = new CompletableFuture<>();
+
+        // 在这里设置为DefaultFuture设置了回调
         future.setCallback(new ResponseCallback() {
             @Override
             public void done(Object response) {
                 Result result = (Result) response;
+
+                // 当业务中设置了回调，调用方法会触发回调，将结果传递给业务类
                 FutureAdapter.this.resultFuture.complete(result);
                 V value = null;
                 try {

@@ -105,7 +105,7 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
     }
 
     @Override
-    public void onApplicationEvent(ContextRefreshedEvent event) {
+    public void onApplicationEvent(ContextRefreshedEvent event) { // 接收到ContextRefreshedEvent事件后，暴露服务。
         if (!isExported() && !isUnexported()) {
             if (logger.isInfoEnabled()) {
                 logger.info("The service ready on spring started. service: " + getInterface());

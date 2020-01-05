@@ -44,10 +44,12 @@ public class ExpiringCache implements Cache {
     private final Map<Object, Object> store;
 
     public ExpiringCache(URL url) {
-        // cache time (second)
+        // cache time (second) 获取缓存时间
         final int secondsToLive = url.getParameter("cache.seconds", 180);
-        // Cache check interval (second)
+        // Cache check interval (second) 获取检查缓存过期的间隔
         final int intervalSeconds = url.getParameter("cache.interval", 4);
+
+        // 存放缓存数据的Map，有缓存的过期时间
         ExpiringMap<Object, Object> expiringMap = new ExpiringMap<Object, Object>(secondsToLive, intervalSeconds);
         expiringMap.getExpireThread().startExpiryIfNotStarted();
         this.store = expiringMap;

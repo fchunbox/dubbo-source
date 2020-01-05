@@ -60,6 +60,7 @@ public class UrlUtils {
                     }
                     backup.append(addresses[i]);
                 }
+                // 例如： zookeeper://10.16.70.80:2181?backup=10.16.70.81:2181,10.16.79.81:2181
                 url += URL_PARAM_STARTING_SYMBOL + Constants.BACKUP_KEY + "=" + backup.toString();
             }
         }

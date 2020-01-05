@@ -202,7 +202,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
                         handler.received(exchangeChannel, request.getData());
                     }
                 }
-            } else if (message instanceof Response) {
+            } else if (message instanceof Response) { // 处理响应
                 handleResponse(channel, (Response) message);
             } else if (message instanceof String) {
                 if (isClientSide(channel)) {

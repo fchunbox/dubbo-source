@@ -252,6 +252,7 @@ public class NetUtils {
         }
 
         try {
+            // 获取所有的网卡接口
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
             if (null == interfaces) {
                 return localAddress;

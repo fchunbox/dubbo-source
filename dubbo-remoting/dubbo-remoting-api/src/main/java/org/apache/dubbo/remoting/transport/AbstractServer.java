@@ -189,8 +189,9 @@ public abstract class AbstractServer extends AbstractEndpoint implements Server 
             return;
         }
 
+        // 这里实现了服务端 tcp限流， 通过设置accepts，接收的连接数来达到限流的效果。
         Collection<Channel> channels = getChannels();
-        if (accepts > 0 && channels.size() > accepts) {
+        if (accepts > 0 && channels.size() > accepts) { // 服务端限流，如果设置了accepts，如果channel的数量超过了accepts后，直接报错，并关闭当前连接
             logger.error("Close channel " + ch + ", cause: The server " + ch.getLocalAddress() + " connections greater than max config " + accepts);
             ch.close();
             return;

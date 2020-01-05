@@ -59,14 +59,14 @@ public class LeastActiveLoadBalance extends AbstractLoadBalance {
         // Filter out all the least active invokers
         for (int i = 0; i < length; i++) {
             Invoker<T> invoker = invokers.get(i);
-            // Get the active number of the invoke
+            // Get the active number of the invoke 获取连接数
             int active = RpcStatus.getStatus(invoker.getUrl(), invocation.getMethodName()).getActive();
             // Get the weight of the invoke configuration. The default value is 100.
             int afterWarmup = getWeight(invoker, invocation);
             // save for later use
             weights[i] = afterWarmup;
             // If it is the first invoker or the active number of the invoker is less than the current least active number
-            if (leastActive == -1 || active < leastActive) {
+            if (leastActive == -1 || active < leastActive) { // 找到最少连接数
                 // Reset the active number of the current invoker to the least active number
                 leastActive = active;
                 // Reset the number of least active invokers

@@ -50,10 +50,15 @@ public class JCache implements org.apache.dubbo.cache.Cache {
         // jcache parameter is the full-qualified class name of SPI implementation
         String type = url.getParameter("jcache");
 
+        // 获取CachingProvider, 也是采用了SPI机制
         CachingProvider provider = StringUtils.isEmpty(type) ? Caching.getCachingProvider() : Caching.getCachingProvider(type);
+
+        // 从CachingProvider中获取缓存管理器
         CacheManager cacheManager = provider.getCacheManager();
+
+        // 从缓存管理器中，获取缓存
         Cache<Object, Object> cache = cacheManager.getCache(key);
-        if (cache == null) {
+        if (cache == null) { // 新建cache
             try {
                 //configure the cache
                 MutableConfiguration config =
@@ -64,7 +69,7 @@ public class JCache implements org.apache.dubbo.cache.Cache {
                                 .setManagementEnabled(true)
                                 .setStatisticsEnabled(true);
                 cache = cacheManager.createCache(key, config);
-            } catch (CacheException e) {
+            } catch (CacheException e) { // 在多线程环境下，cache获取已经创建完成
                 // concurrent cache initialization
                 cache = cacheManager.getCache(key);
             }

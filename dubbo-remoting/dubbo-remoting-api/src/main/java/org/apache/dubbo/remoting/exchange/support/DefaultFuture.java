@@ -42,14 +42,16 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * DefaultFuture.
+ * DefaultFuture. 是ResponseFuture的默认实现
  */
 public class DefaultFuture implements ResponseFuture {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultFuture.class);
 
+    /** 缓存Channel， key是request id */
     private static final Map<Long, Channel> CHANNELS = new ConcurrentHashMap<>();
 
+    /** 缓存了DefaultFuture， key为request id */
     private static final Map<Long, DefaultFuture> FUTURES = new ConcurrentHashMap<>();
 
     public static final Timer TIME_OUT_TIMER = new HashedWheelTimer(
@@ -75,6 +77,8 @@ public class DefaultFuture implements ResponseFuture {
         this.id = request.getId();
         this.timeout = timeout > 0 ? timeout : channel.getUrl().getPositiveParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
         // put into waiting map.
+
+        /** 将某次请求的id和future、channel关键，以便响应回来时能够找到channel和future */
         FUTURES.put(id, this);
         CHANNELS.put(id, channel);
     }
@@ -99,7 +103,7 @@ public class DefaultFuture implements ResponseFuture {
      */
     public static DefaultFuture newFuture(Channel channel, Request request, int timeout) {
         final DefaultFuture future = new DefaultFuture(channel, request, timeout);
-        // timeout check
+        // timeout check, 开启超时检测
         timeoutCheck(future);
         return future;
     }
@@ -142,8 +146,14 @@ public class DefaultFuture implements ResponseFuture {
         }
     }
 
+    /**
+     * 当接收到数据的时候，调用此方法HeaderExchangeHandler中调用
+     * @param channel
+     * @param response
+     */
     public static void received(Channel channel, Response response) {
         try {
+            // 根据request id返回对应的future
             DefaultFuture future = FUTURES.remove(response.getId());
             if (future != null) {
                 future.doReceived(response);
@@ -164,8 +174,14 @@ public class DefaultFuture implements ResponseFuture {
         return get(timeout);
     }
 
+    /**
+     * 同步调用时，获取数据，这里的同步，只是同步等待，实际上还是异步调用。
+     * @param timeout
+     * @return
+     * @throws RemotingException
+     */
     @Override
-    public Object get(int timeout) throws RemotingException {
+    public Object get(int timeout) throws RemotingException { // 在get数据的时候，采用的是超时
         if (timeout <= 0) {
             timeout = Constants.DEFAULT_TIMEOUT;
         }
@@ -173,7 +189,7 @@ public class DefaultFuture implements ResponseFuture {
             long start = System.currentTimeMillis();
             lock.lock();
             try {
-                while (!isDone()) {
+                while (!isDone()) { // 自旋，等待结果返回
                     done.await(timeout, TimeUnit.MILLISECONDS);
                     if (isDone() || System.currentTimeMillis() - start > timeout) {
                         break;
@@ -226,6 +242,9 @@ public class DefaultFuture implements ResponseFuture {
         }
     }
 
+    /**
+     * timeout 检测
+     */
     private static class TimeoutCheckTask implements TimerTask {
 
         private DefaultFuture future;
@@ -235,8 +254,8 @@ public class DefaultFuture implements ResponseFuture {
         }
 
         @Override
-        public void run(Timeout timeout) {
-            if (future == null || future.isDone()) {
+        public void run(Timeout timeout) { // 有个定时器，如果在超时时间内都没有返回，那么直接返回timeout response
+            if (future == null || future.isDone()) { // 如果future依据完成，ok直接返回
                 return;
             }
             // create exception response.
@@ -335,7 +354,7 @@ public class DefaultFuture implements ResponseFuture {
         } finally {
             lock.unlock();
         }
-        if (callback != null) {
+        if (callback != null) { // 如果设置了回调，调用回调
             invokeCallback(callback);
         }
     }

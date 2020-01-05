@@ -110,10 +110,10 @@ public class RpcStatus {
      */
     public static boolean beginCount(URL url, String methodName, int max) {
         max = (max <= 0) ? Integer.MAX_VALUE : max;
-        RpcStatus appStatus = getStatus(url);
-        RpcStatus methodStatus = getStatus(url, methodName);
-        if (methodStatus.active.incrementAndGet() > max) {
-            methodStatus.active.decrementAndGet();
+        RpcStatus appStatus = getStatus(url); // 获取接口的状态
+        RpcStatus methodStatus = getStatus(url, methodName); // 获取接口方法的RpcStatus
+        if (methodStatus.active.incrementAndGet() > max) { // 如果激活数量加1后，大于了max，
+            methodStatus.active.decrementAndGet(); // 当前激活的连接数减1，返回false
             return false;
         } else {
             appStatus.active.incrementAndGet();

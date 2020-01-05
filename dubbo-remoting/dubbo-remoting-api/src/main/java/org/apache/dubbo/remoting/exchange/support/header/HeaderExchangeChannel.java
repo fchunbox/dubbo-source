@@ -101,6 +101,13 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         return request(request, channel.getUrl().getPositiveParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT));
     }
 
+    /**
+     * 发送请求
+     * @param request
+     * @param timeout
+     * @return
+     * @throws RemotingException
+     */
     @Override
     public ResponseFuture request(Object request, int timeout) throws RemotingException {
         if (closed) {
@@ -110,7 +117,13 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         Request req = new Request();
         req.setVersion(Version.getProtocolVersion());
         req.setTwoWay(true);
-        req.setData(request);
+        req.setData(request); // 这里的request就是Invocation对象
+
+        // 这里new 了DefaultFuture
+        // 1. 创建DefaultFuture对象
+        // 2. 创建超时检测的定时器。
+        // 3. 接收响应数据
+        // 4. 同步调用时，get方法获取响应数据
         DefaultFuture future = DefaultFuture.newFuture(channel, req, timeout);
         try {
             channel.send(req);

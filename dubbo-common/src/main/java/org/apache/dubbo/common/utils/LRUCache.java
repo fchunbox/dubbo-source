@@ -20,6 +20,11 @@ import java.util.LinkedHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * LRUCache 使用LinkedHashMap来实现，这是进程级别的
+ * @param <K>
+ * @param <V>
+ */
 public class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
     private static final long serialVersionUID = -5167631809472116969L;
@@ -27,6 +32,7 @@ public class LRUCache<K, V> extends LinkedHashMap<K, V> {
     private static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
     private static final int DEFAULT_MAX_CAPACITY = 1000;
+    // 大量使用了ReentrantLock
     private final Lock lock = new ReentrantLock();
     private volatile int maxCapacity;
 
@@ -34,6 +40,7 @@ public class LRUCache<K, V> extends LinkedHashMap<K, V> {
         this(DEFAULT_MAX_CAPACITY);
     }
 
+    // 设置了缓存的最大值
     public LRUCache(int maxCapacity) {
         super(16, DEFAULT_LOAD_FACTOR, true);
         this.maxCapacity = maxCapacity;
@@ -41,6 +48,8 @@ public class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
     @Override
     protected boolean removeEldestEntry(java.util.Map.Entry<K, V> eldest) {
+        // 这就是实现LRU的关键，在LinkedHashMap中，在插入数据后，会计算的
+        // 插入数据后，容量大于最大值，就会删除老的数据。
         return size() > maxCapacity;
     }
 

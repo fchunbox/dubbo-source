@@ -21,11 +21,7 @@ import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.Version;
 import org.apache.dubbo.common.bytecode.Wrapper;
 import org.apache.dubbo.common.extension.ExtensionLoader;
-import org.apache.dubbo.common.utils.ClassHelper;
-import org.apache.dubbo.common.utils.CollectionUtils;
-import org.apache.dubbo.common.utils.ConfigUtils;
-import org.apache.dubbo.common.utils.NetUtils;
-import org.apache.dubbo.common.utils.StringUtils;
+import org.apache.dubbo.common.utils.*;
 import org.apache.dubbo.config.annotation.Reference;
 import org.apache.dubbo.config.context.ConfigManager;
 import org.apache.dubbo.config.support.Parameter;
@@ -47,13 +43,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 
 /**
@@ -250,6 +240,9 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         ref = null;
     }
 
+    /**
+     * 初始化，创建Service接口的动态代理对象
+     */
     private void init() {
         if (initialized) {
             return;
@@ -321,6 +314,12 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         }
         return new ConsumerModel(serviceKey, serviceInterface, ref, methods, attributes);
     }
+
+    /**
+     * 创建service 的proxy对象
+     * @param map
+     * @return
+     */
     @SuppressWarnings({"unchecked", "rawtypes", "deprecation"})
     private T createProxy(Map<String, String> map) {
         if (shouldJvmRefer(map)) {
@@ -347,6 +346,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 }
             } else { // assemble URL from register center's configuration
                 checkRegistry();
+                // 加载多个注册中心， provider = false
                 List<URL> us = loadRegistries(false);
                 if (CollectionUtils.isNotEmpty(us)) {
                     for (URL u : us) {

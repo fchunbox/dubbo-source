@@ -65,6 +65,8 @@ public class RandomLoadBalance extends AbstractLoadBalance {
             }
         }
         // If all invokers have the same weight value or totalWeight=0, return evenly.
+
+        // 如果直接为0， 会出现偏移，导致0号inoker的压力大，随机可以选择invoker离散化，不会集中的使用某一个invoker。
         return invokers.get(ThreadLocalRandom.current().nextInt(length));
     }
 

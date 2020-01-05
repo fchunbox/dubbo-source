@@ -39,6 +39,14 @@ public class TpsLimitFilter implements Filter {
 
     private final TPSLimiter tpsLimiter = new DefaultTPSLimiter();
 
+    /**
+     * 思想： 令牌桶的原理，在指定的时间间隔内，在令牌桶中放入固定数量的令牌，
+     * 如果在指定的时间间隔内，没有令牌直接报错，在下一个interval开始时，重置令牌数。
+     * @param invoker    service
+     * @param invocation invocation.
+     * @return
+     * @throws RpcException
+     */
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
 

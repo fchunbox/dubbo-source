@@ -44,12 +44,14 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class DubboInvoker<T> extends AbstractInvoker<T> {
 
+    /** 客户端的connections 限流 */
     private final ExchangeClient[] clients;
 
     private final AtomicPositiveInteger index = new AtomicPositiveInteger();
 
     private final String version;
 
+    /** ReentrantLock的使用 */
     private final ReentrantLock destroyLock = new ReentrantLock();
 
     private final Set<Invoker<?>> invokers;
@@ -66,6 +68,12 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
         this.invokers = invokers;
     }
 
+    /**
+     * 真正的执行远程调用，其实都是异步调用，没有同步调用，同步调用的实现的设置了超时时间
+     * @param invocation
+     * @return
+     * @throws Throwable
+     */
     @Override
     protected Result doInvoke(final Invocation invocation) throws Throwable {
         RpcInvocation inv = (RpcInvocation) invocation;
@@ -80,8 +88,12 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
             currentClient = clients[index.getAndIncrement() % clients.length];
         }
         try {
+            // 是否是异步调用
             boolean isAsync = RpcUtils.isAsync(getUrl(), invocation);
+
+
             boolean isAsyncFuture = RpcUtils.isReturnTypeFuture(inv);
+            // 是否是一次性请求，就是不需要返回值的请求
             boolean isOneway = RpcUtils.isOneway(getUrl(), invocation);
             int timeout = getUrl().getMethodParameter(methodName, Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
             if (isOneway) {
@@ -89,10 +101,14 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
                 currentClient.send(inv, isSent);
                 RpcContext.getContext().setFuture(null);
                 return new RpcResult();
-            } else if (isAsync) {
+            } else if (isAsync) { // 如果是异步请求
+
+                // 发送请求，返回future对象
                 ResponseFuture future = currentClient.request(inv, timeout);
-                // For compatibility
+                // For compatibility， 向后兼容，使用了FutureAdapter, 全部是基于CompeleteFuture
                 FutureAdapter<Object> futureAdapter = new FutureAdapter<>(future);
+
+                // 在当前线程的ThreadLocal中，设置futureAdapter, 目的就是为了可以在异步调用时，可以通过RpcContext获取到future
                 RpcContext.getContext().setFuture(futureAdapter);
 
                 Result result;
@@ -103,8 +119,9 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
                     result = new SimpleAsyncRpcResult(futureAdapter, futureAdapter.getResultFuture(), false);
                 }
                 return result;
-            } else {
+            } else { // 同步调用实现
                 RpcContext.getContext().setFuture(null);
+                // 实质还是通过future的get方法来实现的，等待server端返回数据
                 return (Result) currentClient.request(inv, timeout).get();
             }
         } catch (TimeoutException e) {

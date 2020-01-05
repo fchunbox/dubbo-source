@@ -128,7 +128,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     /**
      * The reference of the interface implementation
      */
-    private T ref;
+    private T ref; // 服务的实现
 
     /**
      * The service name
@@ -324,14 +324,21 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         checkMock(interfaceClass);
     }
 
-    public synchronized void export() {
+    public synchronized void export() { // 暴露服务，一个是向注册中心注册，另一个就是启动Netty Server
         checkAndUpdateSubConfigs();
 
-        if (!shouldExport()) {
+        if (!shouldExport()) { // 标明是否要暴露服务
             return;
         }
 
-        if (shouldDelay()) {
+        if (shouldDelay()) { // 是否延迟暴露
+            /**
+             * 为什么需要延迟暴露？
+             * 如果没有延迟暴露，直接将服务暴露处理，由于服务需要预热而不能立即访问，而
+             * consumer端可以立即感知，当consumer端进行远程访问时，
+             * retry越多可能
+             *
+             */
             delayExportExecutor.schedule(this::doExport, delay, TimeUnit.MILLISECONDS);
         } else {
             doExport();
@@ -360,6 +367,9 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         return delay != null && delay > 0;
     }
 
+    /**
+     * 发布服务
+     */
     protected synchronized void doExport() {
         if (unexported) {
             throw new IllegalStateException("The service " + interfaceClass.getName() + " has already unexported!");
@@ -367,10 +377,10 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         if (exported) {
             return;
         }
-        exported = true;
+        exported = true; // 风险值
 
         if (StringUtils.isEmpty(path)) {
-            path = interfaceName;
+            path = interfaceName; // 接口名
         }
         doExportUrls();
     }
@@ -409,8 +419,10 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void doExportUrls() {
+        // 获取注册中心的地址， 多个，多注册中心
         List<URL> registryURLs = loadRegistries(true);
-        for (ProtocolConfig protocolConfig : protocols) {
+        for (ProtocolConfig protocolConfig : protocols) { // 多协议，也就是服务的访问协议
+            // 多版本和group
             String pathKey = URL.buildKey(getContextPath(protocolConfig).map(p -> p + "/" + path).orElse(path), group, version);
             ProviderModel providerModel = new ProviderModel(pathKey, ref, interfaceClass);
             ApplicationModel.initProviderModel(pathKey, providerModel);
@@ -421,7 +433,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     private void doExportUrlsFor1Protocol(ProtocolConfig protocolConfig, List<URL> registryURLs) {
         String name = protocolConfig.getName();
         if (StringUtils.isEmpty(name)) {
-            name = Constants.DUBBO;
+            name = Constants.DUBBO; // 默认为dubbo协议
         }
 
         Map<String, String> map = new HashMap<String, String>();
@@ -435,6 +447,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         if (CollectionUtils.isNotEmpty(methods)) {
             for (MethodConfig method : methods) {
                 appendParameters(map, method, method.getName());
+                // retryKey
                 String retryKey = method.getName() + ".retry";
                 if (map.containsKey(retryKey)) {
                     String retryValue = map.remove(retryKey);
@@ -488,7 +501,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             } // end of methods for
         }
 
-        if (ProtocolUtils.isGeneric(generic)) {
+        if (ProtocolUtils.isGeneric(generic)) { // 泛化调用，一般是用于调试。
             map.put(Constants.GENERIC_KEY, generic);
             map.put(Constants.METHODS_KEY, Constants.ANY_VALUE);
         } else {
@@ -513,8 +526,8 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             }
         }
         // export service
-        String host = this.findConfigedHosts(protocolConfig, registryURLs, map);
-        Integer port = this.findConfigedPorts(protocolConfig, name, map);
+        String host = this.findConfigedHosts(protocolConfig, registryURLs, map); // 获取本机ip
+        Integer port = this.findConfigedPorts(protocolConfig, name, map); // 获取端口
         URL url = new URL(name, host, port, getContextPath(protocolConfig).map(p -> p + "/" + path).orElse(path), map);
 
         if (ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class)
@@ -536,7 +549,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                 if (logger.isInfoEnabled()) {
                     logger.info("Export dubbo service " + interfaceClass.getName() + " to url " + url);
                 }
-                if (CollectionUtils.isNotEmpty(registryURLs)) {
+                if (CollectionUtils.isNotEmpty(registryURLs)) { // 多注册中心
                     for (URL registryURL : registryURLs) {
                         url = url.addParameterIfAbsent(Constants.DYNAMIC_KEY, registryURL.getParameter(Constants.DYNAMIC_KEY));
                         URL monitorUrl = loadMonitor(registryURL);
@@ -556,6 +569,8 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                         Invoker<?> invoker = proxyFactory.getInvoker(ref, (Class) interfaceClass, registryURL.addParameterAndEncoded(Constants.EXPORT_KEY, url.toFullString()));
                         DelegateProviderMetaDataInvoker wrapperInvoker = new DelegateProviderMetaDataInvoker(invoker, this);
 
+                        // 暴露服务时，首先将服务注册到注册中心，然后在发布服务，如果没有延迟，一旦服务注册到
+                        // 注册中心，很有可能造成客户端无法访问服务，出现雪崩效应。
                         Exporter<?> exporter = protocol.export(wrapperInvoker);
                         exporters.add(exporter);
                     }
@@ -693,6 +708,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             if (provider != null && (portToBind == null || portToBind == 0)) {
                 portToBind = provider.getPort();
             }
+            // 获取protocol扩展，创建ProtocolFilterWrapper 和 ProtocolListenerWrapper
             final int defaultPort = ExtensionLoader.getExtensionLoader(Protocol.class).getExtension(name).getDefaultPort();
             if (portToBind == null || portToBind == 0) {
                 portToBind = defaultPort;

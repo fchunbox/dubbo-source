@@ -27,7 +27,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 
 /**
- * InvokerHandler
+ * InvokerHandler: service
  */
 public class InvokerInvocationHandler implements InvocationHandler {
     private static final Logger logger = LoggerFactory.getLogger(InvokerInvocationHandler.class);
@@ -54,12 +54,23 @@ public class InvokerInvocationHandler implements InvocationHandler {
             return invoker.equals(args[0]);
         }
 
+        // 最终调用Invoker.invoke方法。recreate()方法将Result的value返回。
         return invoker.invoke(createInvocation(method, args)).recreate();
     }
 
+    /**
+     * 创建Invocation对象
+     * @param method
+     * @param args
+     * @return
+     */
     private RpcInvocation createInvocation(Method method, Object[] args) {
         RpcInvocation invocation = new RpcInvocation(method, args);
+
+
+        // 判断是否是异步调用： 判断的依据就是服务的返回值是否是CompletableFuture
         if (RpcUtils.hasFutureReturnType(method)) {
+            // 设置异步key和future返回值的key
             invocation.setAttachment(Constants.FUTURE_RETURNTYPE_KEY, "true");
             invocation.setAttachment(Constants.ASYNC_KEY, "true");
         }

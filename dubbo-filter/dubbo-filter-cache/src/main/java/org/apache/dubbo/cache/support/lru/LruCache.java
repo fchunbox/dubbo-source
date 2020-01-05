@@ -45,7 +45,7 @@ public class LruCache implements Cache {
     /**
      * This is used to store cache records
      */
-    private final Map<Object, Object> store;
+    private final Map<Object, Object> store; // 用于记录缓存数据
 
     /**
      * Initialize LruCache, it uses constructor argument <b>cache.size</b> value as its storage max size.
@@ -54,6 +54,7 @@ public class LruCache implements Cache {
      */
     public LruCache(URL url) {
         final int max = url.getParameter("cache.size", 1000);
+        // 使用LinkedHashMap来实现LRU，Mybatis的LRU缓存也是此方式
         this.store = new LRUCache<Object, Object>(max);
     }
 
